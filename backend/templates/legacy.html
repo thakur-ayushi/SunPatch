@@ -1,0 +1,213 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>SunPatch 2.0</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link href="https://unpkg.com/modern-normalize/modern-normalize.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <nav class="nav">
+    <div class="brand">SunPatch</div>
+    <div class="right">
+      <label class="switch">
+        <input id="auto" type="checkbox" checked>
+        <span>Auto-Track</span>
+      </label>
+    </div>
+  </nav>
+  
+  <main class="grid">
+    <section class="card">
+      <h3>Location & Panel</h3>
+      <div class="row"><label>Latitude</label><input id="lat" type="number" step="0.0001"></div>
+      <div class="row"><label>Longitude</label><input id="lon" type="number" step="0.0001"></div>
+      <div class="row"><label>Panel Capacity (kW)</label><input id="kw" type="number" step="0.1"></div>
+      <div class="row" style="gap:8px"><button id="useLoc">Use My Location</button><button id="fetchWx">Fetch Weather</button></div>
+      <small class="muted">Tip: “Fetch Weather” pulls clouds, AQI, temp using your lat/lon.</small>
+    </section>
+
+    <section class="card">
+      <h3>Weather & Air</h3>
+      <div class="row">Temperature: <b><span id="temp">—</span> °C</b></div>
+      <div class="row">Condition: <b><span id="wdesc">—</span></b></div>
+      <div class="row">Humidity: <b><span id="hum">—</span>%</b></div>
+      <hr class="sep">
+      <div class="row"><label>Cloudiness (%)</label><input id="cloud" type="number" min="0" max="100"></div>
+      <div class="row"><label>AQI</label><input id="aqi" type="number" min="0" max="500"></div>
+      <small class="muted">You can override these if APIs fail—model still works.</small>
+    </section>
+
+    <section class="card">
+      <h3>Panel Preview</h3>
+      <div style="display:flex;flex-direction:column;align-items:center;height:260px;">
+        <!-- Simple Sun Dome -->
+        <svg id="sunSVG" width="260" height="180" viewBox="0 0 260 180" style="margin-bottom:-20px;">
+          <circle cx="130" cy="100" r="80" stroke="#F6AD55" stroke-width="1.5" fill="none" stroke-dasharray="4,4"/>
+          <circle id="sunIcon" r="12" fill="#FFD93B" stroke="#F6AD55" stroke-width="3"/>
+        </svg>
+        <!-- Solar Panel -->
+        <svg id="panelSVG" width="180" height="120" viewBox="0 0 180 120" style="margin-top:-10px;">
+          <rect x="20" y="30" width="140" height="60" rx="6" ry="6" fill="#2b6cb0" stroke="#111" stroke-width="3"/>
+          <g id="cells">
+            <rect x="25" y="35" width="30" height="20" fill="#3c82f6"/>
+            <rect x="60" y="35" width="30" height="20" fill="#3c82f6"/>
+            <rect x="95" y="35" width="30" height="20" fill="#3c82f6"/>
+            <rect x="130" y="35" width="30" height="20" fill="#3c82f6"/>
+            <rect x="25" y="65" width="30" height="20" fill="#3c82f6"/>
+            <rect x="60" y="65" width="30" height="20" fill="#3c82f6"/>
+            <rect x="95" y="65" width="30" height="20" fill="#3c82f6"/>
+            <rect x="130" y="65" width="30" height="20" fill="#3c82f6"/>
+          </g>
+        </svg>
+      </div>
+      <small class="muted">The sun follows elevation & azimuth, and the panel tilts/rotates to track it.</small>
+    </section>
+
+    <section class="card">
+      <h3>Angles</h3>
+      <div class="row">Solar Elevation: <span id="el">--</span>°</div>
+      <div class="row">Solar Azimuth: <span id="az">--</span>°</div>
+      <div class="row"><label>Target Tilt (°)</label><input id="tilt" type="range" min="0" max="90" step="1"><span id="tiltVal"></span></div>
+      <div class="row"><label>Target Azimuth (°)</label><input id="taz" type="range" min="0" max="360" step="1"><span id="tazVal"></span></div>
+    </section>
+
+    <section class="card highlight">
+      <h3>Energy & Impact</h3>
+      <div class="big">
+        <div>Daily Energy</div>
+        <div><span id="kwh">—</span> kWh</div>
+      </div>
+      <div class="mini">
+        <div>Annual Energy: <b><span id="annual">—</span> kWh</b></div>
+        <div>CO₂ Reduction: <b><span id="co2">—</span> tonnes/yr</b></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">Built for Hackathon — IoT × Climate × AI</footer>
+
+  <script>
+    const elAuto = document.getElementById('auto');
+    const elLat = document.getElementById('lat');
+    const elLon = document.getElementById('lon');
+    const elKW = document.getElementById('kw');
+
+    const elCloud = document.getElementById('cloud');
+    const elAQI = document.getElementById('aqi');
+    const elTemp = document.getElementById('temp');
+    const elWDesc = document.getElementById('wdesc');
+    const elHum = document.getElementById('hum');
+
+    const elEl = document.getElementById('el');
+    const elAz = document.getElementById('az');
+    const elTilt = document.getElementById('tilt');
+    const elTAz = document.getElementById('taz');
+    const elTiltVal = document.getElementById('tiltVal');
+    const elTAzVal = document.getElementById('tazVal');
+    const elKwh = document.getElementById('kwh');
+    const elAnnual = document.getElementById('annual');
+    const elCO2 = document.getElementById('co2');
+
+    const btnLoc = document.getElementById('useLoc');
+    const btnWx = document.getElementById('fetchWx');
+
+    const panelSVG = document.getElementById('panelSVG');
+    const sunIcon = document.getElementById('sunIcon');
+
+    function updatePanelPreview(tilt, az) {
+      const tiltDeg = tilt * 0.8;
+      const azDeg = (az - 180) * 0.3;
+      panelSVG.style.transform = `rotateX(${tiltDeg}deg) rotateY(${azDeg}deg)`;
+      panelSVG.style.transformOrigin = "50% 50%";
+    }
+
+    function updateSunPosition(elevation, azimuth) {
+      const cx = 130, cy = 100, r = 80;
+      const elevRad = (Math.PI / 180) * elevation;
+      const azRad = (Math.PI / 180) * azimuth;
+      const x = cx + r * Math.cos(elevRad) * Math.sin(azRad);
+      const y = cy - r * Math.sin(elevRad);
+      sunIcon.setAttribute("cx", x);
+      sunIcon.setAttribute("cy", y);
+    }
+
+    async function refresh() {
+      const res = await fetch('/api/state');
+      const j = await res.json();
+
+      elAuto.checked = j.auto;
+      elLat.value = j.lat;
+      elLon.value = j.lon;
+      elKW.value = j.panel_kw;
+
+      elCloud.value = j.weather.cloud_pct ?? '';
+      elAQI.value = j.weather.aqi ?? '';
+
+      elTemp.textContent = j.weather.temp_c ?? '—';
+      elWDesc.textContent = j.weather.desc ?? '—';
+      elHum.textContent = j.weather.humidity ?? '—';
+
+      elEl.textContent = j.solar.elevation.toFixed(2);
+      elAz.textContent = j.solar.azimuth.toFixed(2);
+
+      elTilt.value = j.target.tilt;
+      elTAz.value = j.target.az;
+      elTiltVal.textContent = Math.round(j.target.tilt);
+      elTAzVal.textContent = Math.round(j.target.az);
+
+      elKwh.textContent = j.energy.daily_kwh.toFixed(2);
+      elAnnual.textContent = j.energy.annual_kwh.toFixed(1);
+      elCO2.textContent = j.energy.co2_tonnes.toFixed(2);
+
+      updatePanelPreview(j.target.tilt, j.target.az);
+      updateSunPosition(j.solar.elevation, j.solar.azimuth);
+    }
+
+    async function pushState() {
+      const payload = {
+        auto: elAuto.checked,
+        lat: parseFloat(elLat.value),
+        lon: parseFloat(elLon.value),
+        panel_kw: parseFloat(elKW.value),
+        cloud_pct: parseInt(elCloud.value),
+        aqi: parseInt(elAQI.value),
+        tilt: parseFloat(elTilt.value),
+        az: parseFloat(elTAz.value),
+      };
+      await fetch('/api/config', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+      });
+      refresh();
+    }
+
+    async function fetchWeather() {
+      await fetch('/api/refresh_weather', { method: 'POST' });
+      refresh();
+    }
+
+    elAuto.addEventListener('change', pushState);
+    [elLat, elLon, elKW, elCloud, elAQI].forEach(x => x.addEventListener('change', pushState));
+    elTilt.addEventListener('input', () => { elTiltVal.textContent = elTilt.value; updatePanelPreview(elTilt.value, elTAz.value); });
+    elTilt.addEventListener('change', pushState);
+    elTAz.addEventListener('input', () => { elTAzVal.textContent = elTAz.value; updatePanelPreview(elTilt.value, elTAz.value); });
+    elTAz.addEventListener('change', pushState);
+
+    btnLoc.addEventListener('click', () => {
+      if (!navigator.geolocation) return alert('Geolocation not supported');
+      navigator.geolocation.getCurrentPosition(pos => {
+        elLat.value = pos.coords.latitude.toFixed(6);
+        elLon.value = pos.coords.longitude.toFixed(6);
+        pushState();
+      }, err => alert('Location error: ' + err.message));
+    });
+
+    btnWx.addEventListener('click', fetchWeather);
+
+    refresh(); setInterval(refresh, 1500);
+  </script>
+</body>
+</html>

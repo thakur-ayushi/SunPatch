@@ -1,0 +1,103 @@
+:root {
+    --bg:#0b1020;
+    --card:#121a33;
+    --text:#e8edf7;
+    --accent:#F6AD55;
+    --muted:#8fa1c7;
+  }
+  
+  * { box-sizing: border-box }
+  
+  body {
+    margin: 0;
+    background: linear-gradient(180deg, #0b1020, #0e1630);
+    color: var(--text);
+    font: 16px/1.5 Inter, system-ui, -apple-system, Segoe UI, Roboto;
+  }
+  
+  .nav {
+    position: sticky;
+    top: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    background: rgba(10,14,30,.7);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid #1f2b4a;
+  }
+  
+  .brand { font-weight: 700; font-size: 18px }
+  
+  .switch { display: flex; gap: 8px; align-items: center }
+  
+  .grid {
+    max-width: 1100px;
+    margin: 22px auto;
+    display: grid;
+    gap: 18px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    padding: 0 10px;
+  }
+  
+  .card {
+    background: var(--card);
+    border: 1px solid #1f2b4a;
+    border-radius: 16px;
+    padding: 16px;
+  }
+  
+  .card h3 { margin: 0 0 12px 0 }
+  
+  .row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin: 8px 0;
+  }
+  .row label { width: 160px; color: var(--muted) }
+  
+  input[type="number"], input[type="range"] { width: 100% }
+  
+  button {
+    background: var(--accent);
+    border: none;
+    color: #1a1a1a;
+    font-weight: 600;
+    padding: 8px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  button:hover { opacity: .9 }
+  
+  .highlight { border: 1px solid #394a7a }
+  
+  .big {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 18px;
+    margin: 10px 0 14px;
+  }
+  
+  .mini {
+    display: flex;
+    justify-content: space-between;
+    color: var(--muted);
+  }
+  
+  .foot {
+    text-align: center;
+    color: #90a4d4;
+    padding: 16px 0 28px;
+    border-top: 1px solid #1f2b4a;
+    margin-top: 10px;
+  }
+  
+  .muted { color: #8fa1c7; font-size: 12px }
+  .sep { border: none; border-top: 1px solid #1f2b4a; margin: 8px 0 }
+  canvas {
+    max-width: 100%;
+  }
+  
+  

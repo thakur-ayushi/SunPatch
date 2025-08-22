@@ -1,0 +1,8 @@
+/* global page styles (keep it simple) */
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: #0b1020;      /* deep blue backdrop for 3D */
+  color: #e8edf7;
+  font-family: system-ui, Segoe UI, Roboto, Arial, sans-serif;
+}

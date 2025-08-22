@@ -1,0 +1,17 @@
+/* optional helpers you can use inside App.jsx */
+.panel-wrap {
+  height: 70vh;
+  position: relative;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(10,14,30,.7);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid #1f2b4a;
+}
